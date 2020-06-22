@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:indexed_list_view/indexed_list_view.dart';
 import 'package:vector_math/vector_math.dart' as vector;
 
 class BottomTabBarAnimated extends StatefulWidget {
@@ -138,8 +137,7 @@ class CurveEdgePainter extends CustomPainter {
 //    canvas.drawRect(largeRect, Paint()..color = Colors.green);
 //    canvas.drawRect(afterRect, Paint()..color = Colors.green);
 
-    final Rect rect =
-        Rect.fromLTWH(0, 0, 15, size.height);
+    final Rect rect = Rect.fromLTWH(0, 0, 15, size.height);
     canvas.drawRect(rect, Paint()..color = Colors.green);
 
     final path = Path();

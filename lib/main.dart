@@ -1,26 +1,27 @@
-import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:for_research/animated_list_demo.dart';
 import 'package:for_research/bottom_tab_animated.dart';
-import 'package:for_research/flexible.dart';
-import 'package:for_research/slivers.dart';
-import 'package:rect_getter/rect_getter.dart';
+import 'package:for_research/nested_scroll_view_issue.dart';
+import 'package:for_research/neumorphic_animated_player/colors.dart';
+import 'package:for_research/neumorphic_animated_player/neumorphism.dart';
+import 'package:for_research/neumorphic_animated_player/player_page.dart';
+import 'package:for_research/parallel_scroll_view.dart';
 
-void main() => runApp(MyApp());
+
+void main() {
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      theme: Theme.of(context).copyWith(
+        backgroundColor: kPrimary,
+        scaffoldBackgroundColor: kPrimary,
+        dialogBackgroundColor: kPrimary,
       ),
-      home: SliverExample(),
+      home: AnimatedListDemo(),
     );
   }
 }
-
-
