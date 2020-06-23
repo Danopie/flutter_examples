@@ -1,3 +1,4 @@
+import 'package:diffutil_dart/diffutil.dart';
 import 'package:flutter/material.dart';
 
 class AnimatedListDemo extends StatefulWidget {
@@ -10,10 +11,30 @@ class _AnimatedListDemoState extends State<AnimatedListDemo> {
 
   @override
   Widget build(BuildContext context) {
+    final newItems = List.unmodifiable(items).cast<int>();
     return Scaffold(
       body: Column(
         children: <Widget>[
-          Expanded(child: FadeInList(items: items)),
+          Expanded(
+            child: ImplicitlyAnimatedList(
+              items: newItems,
+              builder: (context, index) {
+                return ItemCard(
+                  item: newItems[index],
+                );
+              },
+              insertAnimationBuilder: (context, animation, child) =>
+                  AnimatedItem(
+                child: child,
+                animation: animation,
+              ),
+              removeAnimationBuilder: (context, animation, child) =>
+                  AnimatedItem(
+                child: child,
+                animation: animation,
+              ),
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -76,16 +97,31 @@ class _AnimatedListDemoState extends State<AnimatedListDemo> {
   }
 }
 
-class FadeInList extends StatefulWidget {
-  final List<int> items;
+typedef ImplicitlyWidgetBuilder<T> = Widget Function(
+    BuildContext context, T item);
+typedef AnimatedImplicitlyWidgetBuilder = Widget Function(
+    BuildContext context, Animation<double> animation, Widget child);
 
-  const FadeInList({Key key, this.items}) : super(key: key);
+class ImplicitlyAnimatedList extends StatefulWidget {
+  final List<int> items;
+  final ImplicitlyWidgetBuilder<int> builder;
+  final AnimatedImplicitlyWidgetBuilder insertAnimationBuilder;
+  final AnimatedImplicitlyWidgetBuilder removeAnimationBuilder;
+
+  const ImplicitlyAnimatedList({
+    Key key,
+    this.items,
+    this.builder,
+    this.insertAnimationBuilder,
+    this.removeAnimationBuilder,
+  }) : super(key: key);
 
   @override
-  _FadeInListState createState() => _FadeInListState();
+  _ImplicitlyAnimatedListState createState() => _ImplicitlyAnimatedListState();
 }
 
-class _FadeInListState extends State<FadeInList> {
+class _ImplicitlyAnimatedListState extends State<ImplicitlyAnimatedList>
+    implements ListUpdateCallback {
   static const kInsertDuration = Duration(milliseconds: 200);
 
   static const kRemoveDuration = Duration(milliseconds: 150);
@@ -94,42 +130,20 @@ class _FadeInListState extends State<FadeInList> {
 
   final scrollController = ScrollController();
 
-  List<int> _oldList;
+  AnimatedImplicitlyWidgetBuilder oldRemoveAnimationBuilder;
+
+  List<int> oldList;
+
+  ImplicitlyWidgetBuilder<int> oldBuilder;
 
   @override
-  void initState() {
-    _oldList = List<int>.from(widget.items);
-    super.initState();
-  }
-
-  @override
-  void didUpdateWidget(FadeInList oldWidget) {
-    checkAndAnimateDifferences();
+  void didUpdateWidget(ImplicitlyAnimatedList oldWidget) {
     super.didUpdateWidget(oldWidget);
-  }
-
-  Future checkAndAnimateDifferences() async {
-    print('-------------------\noldList:${_oldList}\nnewList:${widget.items}');
-    if (widget.items == null || widget.items.isEmpty) {
-      await _removeAllItems();
-      _oldList.clear();
-    } else if (_oldList.length != widget.items.length) {
-      final lengthDifference = widget.items.length - _oldList.length;
-      final oldListIndex = _oldList.length;
-      if (lengthDifference >= 0) {
-        _oldList = List<int>.from(widget.items);
-      }
-      for (int i = 0; i < lengthDifference.abs(); i++) {
-        if (lengthDifference >= 0) {
-          await _insertItemAt(oldListIndex + i);
-        } else {
-          await _removeItemAt(oldListIndex - 1 - i);
-        }
-      }
-      if (lengthDifference < 0) {
-        _oldList = List<int>.from(widget.items);
-      }
-    }
+    oldList = oldWidget.items;
+    final diffResult = calculateListDiff<int>(oldList, widget.items);
+    oldRemoveAnimationBuilder = oldWidget.removeAnimationBuilder;
+    oldBuilder = oldWidget.builder;
+    diffResult.dispatchUpdatesTo(this);
   }
 
   @override
@@ -138,21 +152,13 @@ class _FadeInListState extends State<FadeInList> {
       controller: scrollController,
       padding: EdgeInsets.symmetric(vertical: 24, horizontal: 12),
       key: _listKey,
-      initialItemCount: _oldList.length,
-      itemBuilder: (BuildContext context, int index, Animation animation) {
-        return AnimatedItem(
-          item: _oldList[index],
-          animation: animation,
-        );
-      },
-    );
-  }
-
-  Widget _buildRemovedItem(
-      BuildContext context, Animation<double> animation, int item) {
-    return AnimatedItem(
-      item: item,
-      animation: animation,
+      initialItemCount: 3,
+      itemBuilder: (BuildContext context, int index, Animation animation) =>
+          widget.insertAnimationBuilder(
+        context,
+        animation,
+        widget.builder(context, index),
+      ),
     );
   }
 
@@ -166,28 +172,50 @@ class _FadeInListState extends State<FadeInList> {
   }
 
   Future<void> _removeItemAt(int index) async {
-    print('_FadeInListState._removeItemAt: $index');
-    final item = _oldList[index];
+    print('_FadeInListState._removeItemAt: $index in list $oldList');
+    final oldItem = oldList[index];
 
     _listKey.currentState.removeItem(index, (context, animation) {
-      return _buildRemovedItem(context, animation, item);
+      return oldRemoveAnimationBuilder(
+          context, animation, oldBuilder(context, oldItem));
     }, duration: kRemoveDuration);
-    await Future.delayed(kRemoveDuration);
   }
 
-  Future<void> _removeAllItems() async {
-    final length = _oldList.length;
-    for (int i = 0; i < length; i++) {
-      await _removeItemAt(length - 1 - i);
+  @override
+  void onChanged(int position, int count, Object payload) async {
+    print('_FadeInListState.onChanged: $position $count');
+  }
+
+  @override
+  Future<void> onInserted(int position, int count) async {
+    print('_ImplicitlyAnimatedListState.onInserted');
+    for (int i = 0; i < count; i++) {
+      await _insertItemAt(position + i);
+    }
+  }
+
+  @override
+  Future<void> onMoved(int fromPosition, int toPosition) async {
+    print('_ImplicitlyAnimatedListState.onMoved');
+    await _removeItemAt(fromPosition);
+    await _insertItemAt(toPosition);
+  }
+
+  @override
+  Future<void> onRemoved(int position, int count) async {
+    print(
+        '_ImplicitlyAnimatedListState.onRemoved: at $position for $count items');
+    for (int i = count - 1; i >= 0; i--) {
+      _removeItemAt(position + i);
     }
   }
 }
 
 class AnimatedItem extends StatelessWidget {
-  final int item;
+  final Widget child;
   final Animation<double> animation;
 
-  const AnimatedItem({Key key, this.item, this.animation}) : super(key: key);
+  const AnimatedItem({Key key, this.child, this.animation}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -196,13 +224,27 @@ class AnimatedItem extends StatelessWidget {
           .animate(animation),
       child: FadeTransition(
         opacity: animation,
-        child: Card(
-          child: Container(
-            margin: EdgeInsets.all(12),
-            alignment: Alignment.center,
-            child: Text("$item"),
-          ),
-        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class ItemCard extends StatelessWidget {
+  const ItemCard({
+    Key key,
+    @required this.item,
+  }) : super(key: key);
+
+  final int item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Container(
+        margin: EdgeInsets.all(12),
+        alignment: Alignment.center,
+        child: Text("$item"),
       ),
     );
   }
