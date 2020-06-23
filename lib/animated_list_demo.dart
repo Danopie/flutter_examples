@@ -115,15 +115,21 @@ class _FadeInListState extends State<FadeInList> {
       _oldList.clear();
     } else if (_oldList.length != widget.items.length) {
       final lengthDifference = widget.items.length - _oldList.length;
+      final oldListIndex = _oldList.length;
+      if (lengthDifference >= 0) {
+        _oldList = List<int>.from(widget.items);
+      }
       for (int i = 0; i < lengthDifference.abs(); i++) {
         if (lengthDifference >= 0) {
-          await _insertItemAt(_oldList.length + i);
+          await _insertItemAt(oldListIndex + i);
         } else {
-          await _removeItemAt(_oldList.length - 1 - i);
+          await _removeItemAt(oldListIndex - 1 - i);
         }
       }
+      if (lengthDifference < 0) {
+        _oldList = List<int>.from(widget.items);
+      }
     }
-    _oldList = List<int>.from(widget.items);
   }
 
   @override
@@ -135,7 +141,7 @@ class _FadeInListState extends State<FadeInList> {
       initialItemCount: _oldList.length,
       itemBuilder: (BuildContext context, int index, Animation animation) {
         return AnimatedItem(
-          item: widget.items[index],
+          item: _oldList[index],
           animation: animation,
         );
       },
