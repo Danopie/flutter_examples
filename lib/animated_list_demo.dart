@@ -1,99 +1,95 @@
+import 'dart:math';
+
 import 'package:diffutil_dart/diffutil.dart';
 import 'package:flutter/material.dart';
+import 'package:nanoid/async/nanoid.dart';
 
 class AnimatedListDemo extends StatefulWidget {
   @override
   _AnimatedListDemoState createState() => _AnimatedListDemoState();
 }
 
+class Data {
+  int index;
+  String id;
+
+  Data(this.index, this.id);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Data &&
+          runtimeType == other.runtimeType &&
+          index == other.index &&
+          id == other.id;
+
+  @override
+  int get hashCode => index.hashCode ^ id.hashCode;
+}
+
 class _AnimatedListDemoState extends State<AnimatedListDemo> {
-  final items = List<int>.generate(3, (i) => i);
+  List<Data> data = List<Data>();
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    requestLoadData();
+    super.initState();
+  }
+
+  void requestLoadData() {
+    if (isLoading) return;
+    isLoading = true;
+    print('_AnimatedListDemoState.requestLoadData');
+    loadData().then((value) {
+      setState(() {
+        data.addAll(value);
+        isLoading = false;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final newItems = List.unmodifiable(items).cast<int>();
     return Scaffold(
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: ImplicitlyAnimatedList(
-              items: newItems,
-              builder: (context, index) {
-                return ItemCard(
-                  item: newItems[index],
-                );
-              },
-              insertAnimationBuilder: (context, animation, child) =>
-                  AnimatedItem(
-                child: child,
-                animation: animation,
+      body: Stack(
+        children: [
+          NotificationListener<ScrollUpdateNotification>(
+            onNotification: (notification) {
+              final offset = notification.metrics.pixels;
+              final maxOffset = notification.metrics.maxScrollExtent;
+              if (offset > maxOffset - 100) {
+                requestLoadData();
+              }
+              return false;
+            },
+            child: ImplicitlyAnimatedList<Data>(
+              items: List.unmodifiable(data).cast<Data>(),
+              builder: (context, dynamic item) => ItemCard(
+                item: item,
               ),
-              removeAnimationBuilder: (context, animation, child) =>
+              insertAnimationBuilder: (context, animation, child) =>
                   AnimatedItem(
                 child: child,
                 animation: animation,
               ),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              Expanded(
-                child: RaisedButton(
-                  child: Text("Add"),
-                  onPressed: () {
-                    setState(() {
-                      items.add(items.length);
-                    });
-                  },
-                ),
-              ),
-              Expanded(
-                child: RaisedButton(
-                  child: Text("Add 2 items"),
-                  onPressed: () async {
-                    setState(() {
-                      final length = items.length;
-                      items.addAll([length, length + 1]);
-                    });
-                  },
-                ),
-              ),
-              Expanded(
-                child: RaisedButton(
-                  child: Text("Remove"),
-                  onPressed: () {
-                    setState(() {
-                      items.removeLast();
-                    });
-                  },
-                ),
-              ),
-              Expanded(
-                child: RaisedButton(
-                  child: Text("Remove 2 items"),
-                  onPressed: () async {
-                    setState(() {
-                      items.removeRange(items.length - 2, items.length);
-                    });
-                  },
-                ),
-              ),
-              Expanded(
-                child: RaisedButton(
-                  child: Text("Remove all"),
-                  onPressed: () async {
-                    setState(() {
-                      items.clear();
-                    });
-                  },
-                ),
-              )
-            ],
-          ),
+          if (data.isEmpty) Center(child: CircularProgressIndicator()),
         ],
       ),
     );
+  }
+
+  Future<List<Data>> loadData() async {
+    await Future.delayed(Duration(seconds: 1));
+    final count = Random().nextInt(2) + 10;
+    final data = List<Data>();
+
+    for (int i = 0; i < count; i++) {
+      data.add(Data(i, await nanoid()));
+    }
+    return data;
   }
 }
 
@@ -102,11 +98,15 @@ typedef ImplicitlyWidgetBuilder<T> = Widget Function(
 typedef AnimatedImplicitlyWidgetBuilder = Widget Function(
     BuildContext context, Animation<double> animation, Widget child);
 
-class ImplicitlyAnimatedList extends StatefulWidget {
-  final List<int> items;
-  final ImplicitlyWidgetBuilder<int> builder;
+class ImplicitlyAnimatedList<T> extends StatefulWidget {
+  final List<T> items;
+  final ImplicitlyWidgetBuilder<T> builder;
   final AnimatedImplicitlyWidgetBuilder insertAnimationBuilder;
   final AnimatedImplicitlyWidgetBuilder removeAnimationBuilder;
+  final ScrollPhysics physics;
+  final ScrollController controller;
+  final Duration insertAnimationDuration;
+  final Duration removeAnimationDuration;
 
   const ImplicitlyAnimatedList({
     Key key,
@@ -114,71 +114,93 @@ class ImplicitlyAnimatedList extends StatefulWidget {
     this.builder,
     this.insertAnimationBuilder,
     this.removeAnimationBuilder,
+    this.physics,
+    this.controller,
+    this.insertAnimationDuration = const Duration(milliseconds: 200),
+    this.removeAnimationDuration = const Duration(milliseconds: 150),
   }) : super(key: key);
 
   @override
-  _ImplicitlyAnimatedListState createState() => _ImplicitlyAnimatedListState();
+  _ImplicitlyAnimatedListState<T> createState() =>
+      _ImplicitlyAnimatedListState<T>();
 }
 
-class _ImplicitlyAnimatedListState extends State<ImplicitlyAnimatedList>
+class _ImplicitlyAnimatedListState<T> extends State<ImplicitlyAnimatedList>
     implements ListUpdateCallback {
-  static const kInsertDuration = Duration(milliseconds: 200);
-
-  static const kRemoveDuration = Duration(milliseconds: 150);
-
   final _listKey = GlobalKey<AnimatedListState>();
 
-  final scrollController = ScrollController();
+  ScrollController scrollController;
 
   AnimatedImplicitlyWidgetBuilder oldRemoveAnimationBuilder;
 
-  List<int> oldList;
+  List<T> oldList;
 
-  ImplicitlyWidgetBuilder<int> oldBuilder;
+  ImplicitlyWidgetBuilder<T> oldBuilder;
 
   @override
-  void didUpdateWidget(ImplicitlyAnimatedList oldWidget) {
+  void initState() {
+    scrollController = widget.controller ?? ScrollController();
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(ImplicitlyAnimatedList<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    oldList = oldWidget.items;
-    final diffResult = calculateListDiff<int>(oldList, widget.items);
-    oldRemoveAnimationBuilder = oldWidget.removeAnimationBuilder;
+    oldList = oldList == null ? List<T>() : oldWidget.items;
+    checkAndAnimateItems(oldWidget);
+  }
+
+  void checkAndAnimateItems(ImplicitlyAnimatedList oldWidget) {
+    oldRemoveAnimationBuilder =
+        oldWidget.removeAnimationBuilder ?? oldWidget.insertAnimationBuilder;
     oldBuilder = oldWidget.builder;
-    diffResult.dispatchUpdatesTo(this);
+
+    calculateListDiff<T>(oldList, widget.items).dispatchUpdatesTo(this);
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedList(
       controller: scrollController,
+      physics: widget.physics,
       padding: EdgeInsets.symmetric(vertical: 24, horizontal: 12),
       key: _listKey,
-      initialItemCount: 3,
-      itemBuilder: (BuildContext context, int index, Animation animation) =>
-          widget.insertAnimationBuilder(
-        context,
-        animation,
-        widget.builder(context, index),
-      ),
+      initialItemCount: 0,
+      itemBuilder: (BuildContext context, int index, Animation animation) {
+        return widget.insertAnimationBuilder(
+          context,
+          animation,
+          widget.builder(context, widget.items[index]),
+        );
+      },
     );
   }
 
   Future<void> _insertItemAt(int index) async {
-    _listKey.currentState.insertItem(index, duration: kInsertDuration);
+    _listKey.currentState
+        .insertItem(index, duration: widget.insertAnimationDuration);
 
-    await Future.delayed(kInsertDuration);
+    await Future.delayed(widget.insertAnimationDuration);
 
-    scrollController.animateTo(scrollController.position.maxScrollExtent,
-        duration: kInsertDuration, curve: Curves.decelerate);
+//    scrollController.animateTo(scrollController.position.maxScrollExtent,
+//        duration: widget.insertAnimationDuration, curve: Curves.decelerate);
   }
 
   Future<void> _removeItemAt(int index) async {
     print('_FadeInListState._removeItemAt: $index in list $oldList');
     final oldItem = oldList[index];
 
-    _listKey.currentState.removeItem(index, (context, animation) {
-      return oldRemoveAnimationBuilder(
-          context, animation, oldBuilder(context, oldItem));
-    }, duration: kRemoveDuration);
+    _listKey.currentState.removeItem(
+      index,
+      (context, animation) {
+        return oldRemoveAnimationBuilder(
+          context,
+          animation,
+          oldBuilder(context, oldItem),
+        );
+      },
+      duration: widget.removeAnimationDuration,
+    );
   }
 
   @override
@@ -236,7 +258,7 @@ class ItemCard extends StatelessWidget {
     @required this.item,
   }) : super(key: key);
 
-  final int item;
+  final Data item;
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +266,7 @@ class ItemCard extends StatelessWidget {
       child: Container(
         margin: EdgeInsets.all(12),
         alignment: Alignment.center,
-        child: Text("$item"),
+        child: Text("Id: ${item.id} -- Index: ${item.index}"),
       ),
     );
   }
