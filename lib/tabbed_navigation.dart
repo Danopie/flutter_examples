@@ -55,7 +55,7 @@ class _RootPageState extends State<RootPage> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        print('onPop: ${Navigator.of(_childContext)}');
+//        print('onPop: ${Navigator.of(_childContext)}');
         Navigator.of(_childContext).pop();
         return false;
       },
@@ -75,7 +75,7 @@ class _RootPageState extends State<RootPage> {
                 return CupertinoPageRoute(
                   settings: settings,
                   builder: (BuildContext context) {
-                    print('assign: ${Navigator.of(context)}');
+//                    print('assign: ${Navigator.of(context)}');
                     _childContext ??= context;
                     switch (settings.name) {
                       case '/':
@@ -159,7 +159,9 @@ class _PageState extends State<Page> {
             RaisedButton(
               child: Text('Pop'),
               onPressed: () {
-                Navigator.of(context).pop();
+                if (!ModalRoute.of(context).isFirst) {
+                  Navigator.of(context).pop();
+                }
               },
             ),
           ],

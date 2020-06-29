@@ -28,8 +28,8 @@ dependencies:
   provider: any
   google_fonts: any
   http: ^0.12.1
-  parallel_scroll_view:
-    path: ../parallel_scroll_view
+  diffutil_dart: ^0.1.0+1
+  nanoid: any
 
 dev_dependencies:
   flutter_test:
