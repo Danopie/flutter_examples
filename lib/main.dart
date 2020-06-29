@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:for_research/journey_demo.dart';
+import 'package:for_research/animated_list_demo.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
 
 void main() {
@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: kPrimary,
         dialogBackgroundColor: kPrimary,
       ),
-      home: JourneyDemo(),
+      home: AnimatedListDemo(),
     );
   }
 }

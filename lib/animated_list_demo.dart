@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:diffutil_dart/diffutil.dart';
@@ -65,7 +66,7 @@ class _AnimatedListDemoState extends State<AnimatedListDemo> {
               return false;
             },
             child: ImplicitlyAnimatedList<Data>(
-              items: data == null ? data : List.unmodifiable(data).cast<Data>(),
+              items: data,
               builder: (context, dynamic item) => ItemCard(
                 item: item,
               ),
@@ -162,9 +163,9 @@ class ImplicitlyAnimatedList<T> extends StatefulWidget {
   final WidgetBuilder loadingBuilder;
   final WidgetBuilder emptyBuilder;
 
-  const ImplicitlyAnimatedList({
+  ImplicitlyAnimatedList({
     Key key,
-    this.items,
+    List<T> items,
     this.builder,
     this.insertAnimationBuilder,
     this.removeAnimationBuilder,
@@ -174,7 +175,8 @@ class ImplicitlyAnimatedList<T> extends StatefulWidget {
     this.removeAnimationDuration = const Duration(milliseconds: 150),
     this.loadingBuilder = buildDefaultLoading,
     this.emptyBuilder = buildDefaultEmpty,
-  }) : super(key: key);
+  })  : items = items != null ? List.unmodifiable(items).cast<T>() : null,
+        super(key: key);
 
   @override
   _ImplicitlyAnimatedListState<T> createState() =>
@@ -194,9 +196,12 @@ class _ImplicitlyAnimatedListState<T> extends State<ImplicitlyAnimatedList> {
 
   bool firstInsert = true;
 
+  ListQueue<DiffResultListUpdateDelegate<T>> updateQueue;
+
   @override
   void initState() {
     scrollController = widget.controller ?? ScrollController();
+    updateQueue = ListQueue<DiffResultListUpdateDelegate<T>>();
     super.initState();
   }
 
@@ -208,17 +213,33 @@ class _ImplicitlyAnimatedListState<T> extends State<ImplicitlyAnimatedList> {
   }
 
   void checkAndAnimateItems(ImplicitlyAnimatedList oldWidget) {
-    DiffResultListUpdateDelegate(
-      firstInsert: firstInsert,
-      insertAnimationDuration: widget.insertAnimationDuration,
-      removeAnimationDuration: oldWidget.removeAnimationDuration,
-      listKey: _listKey,
-      oldBuilder: oldWidget.builder,
-      removeAnimationBuilder:
-          oldWidget.removeAnimationBuilder ?? oldWidget.insertAnimationBuilder,
-      oldList: oldList ?? List<T>(),
-      newList: widget.items ?? List<T>(),
-    ).execute();
+    final delegate = DiffResultListUpdateDelegate<T>(
+        firstInsert: firstInsert,
+        insertAnimationDuration: widget.insertAnimationDuration,
+        removeAnimationDuration: oldWidget.removeAnimationDuration,
+        listKey: _listKey,
+        oldBuilder: oldWidget.builder,
+        removeAnimationBuilder: oldWidget.removeAnimationBuilder ??
+            oldWidget.insertAnimationBuilder,
+        oldList: oldList ?? List<T>(),
+        newList: widget.items ?? List<T>(),
+        onInsertDone: () {
+          updateQueueAndAnimateNext();
+        });
+
+    if (updateQueue.isEmpty) {
+      delegate.execute();
+    }
+    if (!delegate.isRedundant) {
+      updateQueue.add(delegate);
+    }
+  }
+
+  void updateQueueAndAnimateNext() {
+    updateQueue.removeFirst();
+    if (updateQueue.isNotEmpty) {
+      updateQueue.first.execute();
+    }
   }
 
   @override
@@ -268,6 +289,7 @@ class DiffResultListUpdateDelegate<T> implements ListUpdateCallback {
   final List<T> newList;
   final Duration insertAnimationDuration;
   final Duration removeAnimationDuration;
+  final Function onInsertDone;
 
   DiffResultListUpdateDelegate({
     this.firstInsert,
@@ -278,9 +300,10 @@ class DiffResultListUpdateDelegate<T> implements ListUpdateCallback {
     this.insertAnimationDuration,
     this.removeAnimationDuration,
     this.newList,
+    this.onInsertDone,
   });
 
-  Future<void> execute() {
+  Future<void> execute() async {
     calculateListDiff<T>(oldList, newList).dispatchUpdatesTo(this);
   }
 
@@ -294,7 +317,6 @@ class DiffResultListUpdateDelegate<T> implements ListUpdateCallback {
   }
 
   Future<void> _removeItemAt(int index) async {
-    print('_FadeInListState._removeItemAt: $index in list $oldList');
     final oldItem = oldList[index];
 
     listKey.currentState.removeItem(
@@ -312,11 +334,13 @@ class DiffResultListUpdateDelegate<T> implements ListUpdateCallback {
 
   @override
   void onChanged(int position, int count, Object payload) async {
+    print('DiffResultListUpdateDelegate.onChanged');
     throw UnimplementedError();
   }
 
   @override
   Future<void> onInserted(int position, int count) async {
+    print('DiffResultListUpdateDelegate.onInserted');
     for (int i = 0; i < count; i++) {
       if (firstInsert) {
         await _insertItemAt(position + i);
@@ -324,18 +348,23 @@ class DiffResultListUpdateDelegate<T> implements ListUpdateCallback {
         _insertItemAt(position + i);
       }
     }
+    onInsertDone();
   }
 
   @override
   Future<void> onMoved(int fromPosition, int toPosition) async {
+    print('DiffResultListUpdateDelegate.onMoved');
     await _removeItemAt(fromPosition);
     await _insertItemAt(toPosition);
   }
 
   @override
   Future<void> onRemoved(int position, int count) async {
+    print('DiffResultListUpdateDelegate.onRemoved');
     for (int i = count - 1; i >= 0; i--) {
       _removeItemAt(position + i);
     }
   }
+
+  bool get isRedundant => oldList.length == 0 && newList.length == 0;
 }
