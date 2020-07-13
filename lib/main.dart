@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:for_research/animated_list_demo.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
+import 'package:for_research/slivers.dart';
 
 void main() {
   runApp(MyApp());
@@ -15,7 +15,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: kPrimary,
         dialogBackgroundColor: kPrimary,
       ),
-      home: AnimatedListDemo(),
+      home: AppBarSnapDemo(),
     );
   }
 }

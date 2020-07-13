@@ -70,7 +70,6 @@ class _TestCustomPainterState extends State<TestCustomPainter>
             ),
           ),
         ));
-    ;
   }
 }
 
