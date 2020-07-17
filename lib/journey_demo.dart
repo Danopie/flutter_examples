@@ -39,15 +39,7 @@ class _JourneyDemoState extends State<JourneyDemo> {
                 child: Text("Sign In"),
                 onPressed: () async {
                   final userInfo = await Navigator.of(context)
-                      .push<UserInfo>(PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        SlideTransition(
-                      position:
-                          Tween<Offset>(begin: Offset(0, 1), end: Offset(0, 0))
-                              .animate(animation),
-                      child: SignInJourney(),
-                    ),
-                  ));
+                      .push<UserInfo>(buildRoute<UserInfo>(SignInJourney()));
                   if (userInfo != null) {
                     setState(() {
                       username = userInfo.username;
@@ -135,8 +127,10 @@ class EnterUserNamePage extends StatelessWidget {
         child: TextField(
           decoration: InputDecoration(hintText: "Username"),
           onSubmitted: (text) {
-            context.read<SignInJourneyManager>().onUserInputUsername(text);
             Navigator.of(context).push(buildRoute(EnterUserPasswordPage()));
+
+            Provider.of<SignInJourneyManager>(context, listen: false)
+                .onUserInputUsername(text);
           },
         ),
       ),
@@ -153,7 +147,8 @@ class EnterUserPasswordPage extends StatelessWidget {
         child: TextField(
           decoration: InputDecoration(hintText: "Password"),
           onSubmitted: (text) {
-            context.read<SignInJourneyManager>().onUserInputPassword(text);
+            Provider.of<SignInJourneyManager>(context, listen: false)
+                .onUserInputPassword(text);
           },
         ),
       ),
