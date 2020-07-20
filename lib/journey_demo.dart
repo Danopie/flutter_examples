@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:for_research/custom_cupertino_route.dart';
 import 'package:provider/provider.dart';
 
 class JourneyDemo extends StatefulWidget {
@@ -38,8 +39,8 @@ class _JourneyDemoState extends State<JourneyDemo> {
               child: RaisedButton(
                 child: Text("Sign In"),
                 onPressed: () async {
-                  final userInfo = await Navigator.of(context)
-                      .push<UserInfo>(buildRoute<UserInfo>(SignInJourney()));
+                  final userInfo = await Navigator.of(context).push<UserInfo>(
+                      buildSwipeRoute<UserInfo>(SignInJourney()));
                   if (userInfo != null) {
                     setState(() {
                       username = userInfo.username;
@@ -56,7 +57,11 @@ class _JourneyDemoState extends State<JourneyDemo> {
   }
 }
 
-buildRoute<T>(Widget widget) => CupertinoPageRoute<T>(
+buildRoute<T>(Widget widget) => MaterialPageRoute<T>(
+      builder: (context) => widget,
+    );
+
+buildSwipeRoute<T>(Widget widget) => CustomCupertinoPageRoute<T>(
       builder: (context) => widget,
     );
 
@@ -108,11 +113,12 @@ class _SignInJourneyState extends State<SignInJourney> {
       value: manager,
       child: Navigator(
         onGenerateRoute: (settings) {
-          if (settings.name == "/")
-            return buildRoute(EnterUserNamePage());
+          if (settings.name == "/home")
+            return buildSwipeRoute(EnterUserNamePage());
           else
             return null;
         },
+        initialRoute: "/home",
       ),
     );
   }
@@ -127,7 +133,8 @@ class EnterUserNamePage extends StatelessWidget {
         child: TextField(
           decoration: InputDecoration(hintText: "Username"),
           onSubmitted: (text) {
-            Navigator.of(context).push(buildRoute(EnterUserPasswordPage()));
+            Navigator.of(context)
+                .push(buildSwipeRoute(EnterUserPasswordPage()));
 
             Provider.of<SignInJourneyManager>(context, listen: false)
                 .onUserInputUsername(text);

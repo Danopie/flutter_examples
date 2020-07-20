@@ -4,8 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_state_notifier/flutter_state_notifier.dart';
-import 'package:state_notifier/state_notifier.dart';
 import 'package:provider/provider.dart';
+import 'package:state_notifier/state_notifier.dart';
 
 class AppBarSnapDemo extends StatefulWidget {
   @override
@@ -32,36 +32,31 @@ class _AppBarSnapDemoState extends State<AppBarSnapDemo>
           final state = context.watch<ItemListState>();
           final items = state.items;
           return Scaffold(
-            body: Column(
-              children: [
-                Expanded(
-                  child: AwesomeListView(
-                    controller: _controller,
-                    onRefresh: context.watch<ItemListController>().onRefresh,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        margin: EdgeInsets.all(12),
-                        height: 60,
-                        color: Colors.green,
-                        child: ListTile(
-                          title: Text("Item $index"),
-                        ),
-                      );
-                    },
-                    itemCount: items?.length,
-                    emptyBuilder: (_) => Center(
-                      child: Text(state.id == ItemListState.Loading
-                          ? "Loading"
-                          : "Empty"),
-                    ),
-                    onPagingLoad: context.watch<ItemListController>().loadMore,
-                    headerBuilder: (context, shrinkOffset, overlapsContent) =>
-                        Placeholder(),
-                    headerMaxExtent: 148,
-                    headerMinExtent: 80,
+            body: AwesomeListView(
+              controller: _controller,
+              onRefresh: context.watch<ItemListController>().onRefresh,
+              itemBuilder: (context, index) {
+                return Container(
+                  margin: EdgeInsets.all(12),
+                  height: 60,
+                  color: Colors.lightBlue,
+                  child: ListTile(
+                    title: Text("Item $index"),
                   ),
-                ),
-              ],
+                );
+              },
+              itemCount: items?.length,
+              emptyBuilder: (_) => Center(
+                child: Text(
+                    state.id == ItemListState.Loading ? "Loading" : "Empty"),
+              ),
+              onPagingLoad: context.watch<ItemListController>().loadMore,
+              headerBuilder: (context, shrinkOffset, overlapsContent) =>
+                  Placeholder(),
+              headerMaxExtent: 148,
+              headerMinExtent: 80,
+              overrideBuilder: (_) =>
+                  Center(child: Text("Network Connectivity Issues Detected")),
             ),
           );
         },
@@ -107,7 +102,7 @@ class ItemListController extends StateNotifier<ItemListState> {
   Future<void> loadMore() async {
     print('ItemListController.loadMore');
     if (state.items != null && state.items.isNotEmpty) {
-      await Future.delayed(Duration(milliseconds: 200));
+      await Future.delayed(Duration(seconds: 3));
       final newList = List.of(state.items)..addAll(_getInitialList());
 
       state = state.copyWith(items: newList);
@@ -125,16 +120,22 @@ class ItemListController extends StateNotifier<ItemListState> {
 class AwesomeListView<T> extends StatefulWidget {
   final ScrollController controller;
   final Function onRefresh;
+
   final IndexedWidgetBuilder itemBuilder;
   final int itemCount;
   final WidgetBuilder emptyBuilder;
+
   final bool pinned;
   final bool floating;
-  final Function onPagingLoad;
   final ScrollHeaderBuilder headerBuilder;
   final double headerMaxExtent;
   final double headerMinExtent;
+
+  final Function onPagingLoad;
   final double pagingTriggerOffset;
+  final WidgetBuilder pagingIndicatorBuilder;
+
+  final WidgetBuilder overrideBuilder;
 
   const AwesomeListView({
     Key key,
@@ -150,18 +151,33 @@ class AwesomeListView<T> extends StatefulWidget {
     this.headerMaxExtent,
     this.headerMinExtent,
     this.pagingTriggerOffset = 100,
+    this.pagingIndicatorBuilder = buildDefaultPagingIndicator,
+    this.overrideBuilder,
   }) : super(key: key);
 
   @override
   _AwesomeListViewState createState() => _AwesomeListViewState();
+
+  static Widget buildDefaultPagingIndicator(BuildContext context) => Center(
+        child: Container(
+          margin: EdgeInsets.symmetric(vertical: 16),
+          height: 24,
+          width: 24,
+          child: CircularProgressIndicator(),
+        ),
+      );
 }
 
 class _AwesomeListViewState extends State<AwesomeListView> {
-  final Throttling thr = new Throttling(duration: Duration(milliseconds: 500));
+  final throttler = new Throttling(duration: Duration(milliseconds: 500));
+
   ScrollController _controller;
+
+  bool _isPagingLoad;
 
   @override
   void initState() {
+    _isPagingLoad = false;
     _controller = widget.controller ?? ScrollController();
     super.initState();
   }
@@ -169,33 +185,12 @@ class _AwesomeListViewState extends State<AwesomeListView> {
   @override
   Widget build(BuildContext context) {
     return NotificationListener<ScrollNotification>(
-      onNotification: (scrollNotification) {
-
-        final userReachingMaxExtent = scrollNotification.metrics.pixels >
-            scrollNotification.metrics.maxScrollExtent -
-                widget.pagingTriggerOffset;
-
-        final userIsScrollingForward =
-            _controller.position.userScrollDirection == ScrollDirection.reverse;
-
-        if (userReachingMaxExtent && userIsScrollingForward) {
-          if (widget.onPagingLoad != null) {
-            thr.throttle(() {
-              widget.onPagingLoad();
-            });
-          }
-          return true;
-        }
-        return false;
-      },
+      onNotification: _handleUserScroll,
       child: RefreshIndicatorIfAndroid(
         onRefresh: widget.onRefresh,
         child: CustomScrollView(
           controller: _controller,
-          physics: AlwaysScrollableScrollPhysics(
-              parent: Theme.of(context).platform == TargetPlatform.iOS
-                  ? CustomBouncingScrollPhysics()
-                  : CustomClampingScrollPhysics()),
+          physics: _getScrollPhysics(context),
           slivers: <Widget>[
             if (widget.headerBuilder != null)
               SliverPersistentHeader(
@@ -213,11 +208,16 @@ class _AwesomeListViewState extends State<AwesomeListView> {
               CupertinoSliverRefreshControl(
                 onRefresh: widget.onRefresh,
               ),
-            if (widget.itemCount != null && widget.itemCount > 0)
+            if (widget.overrideBuilder != null)
+              SliverFillRemaining(
+                child: widget.overrideBuilder(context),
+                hasScrollBody: false,
+              )
+            else if (widget.itemCount != null && widget.itemCount > 0)
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  widget.itemBuilder,
-                  childCount: widget.itemCount,
+                  _buildItem,
+                  childCount: _getItemCount(),
                 ),
               )
             else
@@ -229,6 +229,52 @@ class _AwesomeListViewState extends State<AwesomeListView> {
         ),
       ),
     );
+  }
+
+  Widget _buildItem(BuildContext context, int index) {
+    if (_isPagingLoad && index == _getItemCount() - 1) {
+      return widget.pagingIndicatorBuilder(context);
+    }
+    return widget.itemBuilder(context, index);
+  }
+
+  int _getItemCount() => widget.itemCount + (_isPagingLoad ? 1 : 0);
+
+  ScrollPhysics _getScrollPhysics(BuildContext context) {
+    return AlwaysScrollableScrollPhysics(
+        parent: Theme.of(context).platform == TargetPlatform.iOS
+            ? CustomBouncingScrollPhysics()
+            : CustomClampingScrollPhysics());
+  }
+
+  bool _handleUserScroll(scrollNotification) {
+    final userReachingMaxExtent = scrollNotification.metrics.pixels >
+        scrollNotification.metrics.maxScrollExtent - widget.pagingTriggerOffset;
+
+    final userIsScrollingForward =
+        _controller.position.userScrollDirection == ScrollDirection.reverse;
+
+    if (userReachingMaxExtent &&
+        userIsScrollingForward &&
+        _isPagingLoad == false) {
+      _initialPagingLoad();
+      return true;
+    }
+    return false;
+  }
+
+  void _initialPagingLoad() {
+    if (widget.onPagingLoad != null) {
+      throttler.throttle(() async {
+        setState(() {
+          _isPagingLoad = true;
+        });
+        await widget.onPagingLoad();
+        setState(() {
+          _isPagingLoad = false;
+        });
+      });
+    }
   }
 }
 
