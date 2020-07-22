@@ -440,7 +440,7 @@ class CustomClampingScrollPhysics extends ClampingScrollPhysics {
 
     if (position.maxScrollExtent <= position.pixels &&
         position.pixels < value) {
-      if (position.maxScrollExtent == 0 && value > 10) {
+      if (position.maxScrollExtent == 0 && value > 0) {
         return value - position.pixels;
       }
     } // overscroll
@@ -468,14 +468,33 @@ class CustomBouncingScrollPhysics extends BouncingScrollPhysics {
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
-    if (position.maxScrollExtent <= position.pixels &&
-        position.pixels < value) {
-      if (position.maxScrollExtent == 0 && value > 10) {
-        return value - position.pixels;
-      }
+    if (position.maxScrollExtent == 0 &&
+        position.pixels < value &&
+        value > 10) {
+      final boundaryOffset = value - position.pixels;
+      return boundaryOffset;
     }
 
     return 0.0;
+  }
+
+  @override
+  Simulation createBallisticSimulation(
+      ScrollMetrics position, double velocity) {
+    final Tolerance tolerance = this.tolerance;
+    if (velocity.abs() >= tolerance.velocity ||
+        (position.outOfRange && position.pixels < 0)) {
+      return BouncingScrollSimulation(
+        spring: spring,
+        position: position.pixels,
+        velocity: velocity *
+            0.91, // TODO(abarth): We should move this constant closer to the drag end.
+        leadingExtent: position.minScrollExtent,
+        trailingExtent: position.maxScrollExtent,
+        tolerance: tolerance,
+      );
+    }
+    return null;
   }
 }
 
