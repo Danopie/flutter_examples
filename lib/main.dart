@@ -1,8 +1,7 @@
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
+import 'package:for_research/animated_selection_slide.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
-import 'package:for_research/sliver_app_bar_snap.dart';
-import 'package:for_research/slivers.dart';
 
 void main() {
   runApp(DevicePreview(
@@ -21,7 +20,7 @@ class MyApp extends StatelessWidget {
         dialogBackgroundColor: kPrimary,
       ),
       builder: DevicePreview.appBuilder,
-      home: SliverAppBarSnap(),
+      home: AnimatedSelectionSlideDemo(),
     );
   }
 }
