@@ -15,16 +15,28 @@ class _SliverAppBarSnapState extends State<SliverAppBarSnap> {
 
   double get minHeight => kToolbarHeight + MediaQuery.of(context).padding.top;
 
+  bool isEmpty = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFF0C0101),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.forward),
+        backgroundColor: Colors.red,
+        onPressed: () {
+          setState(() {
+            isEmpty = !isEmpty;
+          });
+        },
+      ),
       body: NotificationListener<ScrollEndNotification>(
-//        onNotification: (_) {
-//          _snapAppbar();
-//          return false;
-//        },
+        onNotification: (_) {
+          _snapAppbar();
+          return false;
+        },
         child: CustomScrollView(
+          physics: AlwaysScrollableScrollPhysics(),
           controller: _controller,
           slivers: [
             SliverAppBar(
@@ -36,13 +48,26 @@ class _SliverAppBarSnapState extends State<SliverAppBarSnap> {
               ),
               expandedHeight: maxHeight - MediaQuery.of(context).padding.top,
             ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return _buildCard(index);
-                },
+            if (!isEmpty)
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    return _buildCard(index);
+                  },
+                ),
+              )
+            else
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Text(
+                    "List is empty",
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -61,11 +86,11 @@ class _SliverAppBarSnapState extends State<SliverAppBarSnap> {
   }
 
   void _snapAppbar() {
-    final heightDelta = maxHeight - minHeight;
+    final scrollDistance = maxHeight - minHeight;
 
-    if (_controller.offset > 0 && _controller.offset < heightDelta) {
+    if (_controller.offset > 0 && _controller.offset < scrollDistance) {
       final double snapOffset =
-          _controller.offset / heightDelta > 0.5 ? heightDelta : 0;
+          _controller.offset / scrollDistance > 0.5 ? scrollDistance : 0;
 
       Future.microtask(() => _controller.animateTo(snapOffset,
           duration: Duration(milliseconds: 200), curve: Curves.easeIn));
