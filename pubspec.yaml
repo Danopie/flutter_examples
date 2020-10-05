@@ -31,13 +31,14 @@ dependencies:
   diffutil_dart: ^0.1.0+1
   nanoid: any
   dio: any
-  flutter_hooks: ^0.12.0
+  flutter_hooks: ^0.14.1
   shared_preferences: any
   flutter_portal: any
   state_notifier: any
   flutter_state_notifier: 0.4.2
   lightweight_bloc: any
   device_preview: any
+  build_context: any
 
 dev_dependencies:
   flutter_test:

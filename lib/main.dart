@@ -1,12 +1,12 @@
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
-import 'package:for_research/animated_selection_slide.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
+import 'package:for_research/vin_id_appbar.dart';
 
 void main() {
   runApp(DevicePreview(
     builder: (_) => MyApp(),
-    enabled: false,
+    enabled: true,
   ));
 }
 
@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
         dialogBackgroundColor: kPrimary,
       ),
       builder: DevicePreview.appBuilder,
-      home: AnimatedSelectionSlideDemo(),
+      home: VinIDHomeAppBarDemo(),
     );
   }
 }
