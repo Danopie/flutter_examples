@@ -37,7 +37,7 @@ dependencies:
   state_notifier: any
   flutter_state_notifier: 0.4.2
   lightweight_bloc: any
-  device_preview: any
+  device_preview: ^0.4.8
   build_context: any
 
 dev_dependencies:

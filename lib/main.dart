@@ -19,7 +19,9 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: kPrimary,
         dialogBackgroundColor: kPrimary,
       ),
+      locale: DevicePreview.of(context).locale,
       builder: DevicePreview.appBuilder,
+
       home: VinIDHomeAppBarDemo(),
     );
   }
