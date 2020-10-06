@@ -6,7 +6,7 @@ import 'package:for_research/vin_id_appbar.dart';
 void main() {
   runApp(DevicePreview(
     builder: (_) => MyApp(),
-    enabled: true,
+    enabled: false,
   ));
 }
 
@@ -21,7 +21,6 @@ class MyApp extends StatelessWidget {
       ),
       locale: DevicePreview.of(context).locale,
       builder: DevicePreview.appBuilder,
-
       home: VinIDHomeAppBarDemo(),
     );
   }

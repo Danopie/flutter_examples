@@ -39,6 +39,7 @@ dependencies:
   lightweight_bloc: any
   device_preview: ^0.4.8
   build_context: any
+  sliver_tools: ^0.1.6
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,4 @@
-package com.danle.for_research
+package com.example.for_research
 
 import io.flutter.embedding.android.FlutterActivity
 
