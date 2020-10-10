@@ -1,7 +1,7 @@
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
+import 'package:for_research/mini_player.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
-import 'package:for_research/vin_id_appbar.dart';
 
 void main() {
   runApp(DevicePreview(
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
       ),
       locale: DevicePreview.of(context).locale,
       builder: DevicePreview.appBuilder,
-      home: VinIDHomeAppBarDemo(),
+      home: MiniPlayerDemo(),
     );
   }
 }
