@@ -1,5 +1,6 @@
 import 'package:build_context/build_context.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 class MiniPlayerDemo extends StatefulWidget {
   @override
@@ -117,6 +118,42 @@ class _MiniPlayerState extends State<MiniPlayer>
   }
 }
 
+class CoverVideo extends StatefulWidget {
+  final double ratio;
+
+  const CoverVideo({Key key, this.ratio}) : super(key: key);
+
+  @override
+  _CoverVideoState createState() => _CoverVideoState();
+}
+
+class _CoverVideoState extends State<CoverVideo> {
+  VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    _controller = VideoPlayerController.network(
+        'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4')
+      ..initialize().then((_) {
+        // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
+        setState(() {});
+      });
+    _controller.setLooping(true);
+    _controller.play();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _controller.value.initialized
+        ? AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          )
+        : Container();
+  }
+}
+
 class CoverImage extends StatelessWidget {
   final double ratio;
 
@@ -145,8 +182,8 @@ class CoverImage extends StatelessWidget {
               ConstrainedBox(
                 constraints: BoxConstraints(
                     maxHeight: maxPictureWidth, maxWidth: maxPictureWidth),
-                child: Image.network(
-                  "https://avatar-nct.nixcdn.com/singer/avatar/2020/05/20/5/f/e/3/1589944002038_600.jpg",
+                child: CoverVideo(
+                  ratio: ratio,
                 ),
               ),
               SizedBox(
