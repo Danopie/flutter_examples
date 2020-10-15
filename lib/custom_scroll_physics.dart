@@ -17,13 +17,14 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       body: SafeArea(
         child: ListView.builder(
+          padding: EdgeInsets.zero,
           scrollDirection: Axis.horizontal,
           controller: _controller,
           physics: CustomScrollPhysics(length: pages.length),
           itemCount: pages.length,
           itemBuilder: (context, index) => Container(
             height: double.infinity,
-            width: 300,
+            width: MediaQuery.of(context).size.width - 40,
             color: randomColor,
             margin: const EdgeInsets.all(20.0),
           ),
@@ -51,12 +52,12 @@ class CustomScrollPhysics extends ScrollPhysics {
     return position.pixels / getItemDimension(position);
   }
 
-  double _getPixels(double page, ScrollPosition position) {
-    return page * getItemDimension(position);
-  }
-
   double getItemDimension(ScrollPosition position) {
     return position.maxScrollExtent / (length - 1);
+  }
+
+  double _getPixels(double page, ScrollPosition position) {
+    return page * getItemDimension(position);
   }
 
   double _getTargetPixels(
@@ -73,6 +74,7 @@ class CustomScrollPhysics extends ScrollPhysics {
   @override
   Simulation createBallisticSimulation(
       ScrollMetrics position, double velocity) {
+    print('CustomScrollPhysics. ${this.tolerance}');
     // If we're out of range and not headed back in range, defer to the parent
     // ballistics, which should put us back in range at a page boundary.
     if ((velocity <= 0.0 && position.pixels <= position.minScrollExtent) ||

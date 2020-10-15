@@ -1,6 +1,6 @@
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
-import 'package:for_research/mini_player.dart';
+import 'package:for_research/custom_scroll_physics.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
 
 void main() {
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
       ),
       locale: DevicePreview.of(context).locale,
       builder: DevicePreview.appBuilder,
-      home: MiniPlayerDemo(),
+      home: MyHomePage(),
     );
   }
 }

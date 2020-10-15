@@ -18,7 +18,10 @@ class _MiniPlayerDemoState extends State<MiniPlayerDemo> {
               title: Text("Item $index"),
             ),
           ),
-          Align(alignment: Alignment.bottomCenter, child: MiniPlayer()),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: MiniPlayer(),
+          ),
         ],
       ),
     );
