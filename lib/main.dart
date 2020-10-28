@@ -1,7 +1,12 @@
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
-import 'package:for_research/custom_scroll_physics.dart';
+import 'package:for_research/immutability.dart';
+import 'package:for_research/messenger_clone.dart';
+import 'package:for_research/mini_player.dart';
+import 'package:for_research/nested_new_navigators.dart';
+import 'package:for_research/netflix_logo.dart';
 import 'package:for_research/neumorphic_animated_player/colors.dart';
+import 'package:for_research/sendo_bus_banner.dart';
 
 void main() {
   runApp(DevicePreview(
@@ -21,7 +26,7 @@ class MyApp extends StatelessWidget {
       ),
       locale: DevicePreview.of(context).locale,
       builder: DevicePreview.appBuilder,
-      home: MyHomePage(),
+      home: SendoBusBanner(),
     );
   }
 }

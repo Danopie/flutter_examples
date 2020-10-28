@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:for_research/custom_cupertino_route.dart';
 import 'package:provider/provider.dart';
 
 class JourneyDemo extends StatefulWidget {
@@ -61,7 +60,7 @@ buildRoute<T>(Widget widget) => MaterialPageRoute<T>(
       builder: (context) => widget,
     );
 
-buildSwipeRoute<T>(Widget widget) => CustomCupertinoPageRoute<T>(
+buildSwipeRoute<T>(Widget widget) => CupertinoPageRoute<T>(
       builder: (context) => widget,
     );
 
